@@ -149,14 +149,10 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
   const baseGasEstimateCurrency = isV4Trade(trade) ? trade?.gasUseEstimateBase?.currency : undefined
   const baseGasEstimatePrice = useStablecoinPrice(baseGasEstimateCurrency)
 
-  const nativeGasCost = useMemo(
-    () => calculateNativeGasCost(nativeGasPrice?.toString(), gasEstimate),
-    [nativeGasPrice, gasEstimate],
-  )
-  const gasCostAmount = useMemo(
-    () => calculateGasCostAmount(nativeGasCost, nativeCurrency),
-    [nativeGasCost, nativeCurrency],
-  )
+  const gasCostAmount = useMemo(() => {
+    const nativeGasCost = calculateNativeGasCost(nativeGasPrice?.toString(), gasEstimate)
+    return calculateGasCostAmount(nativeGasCost, nativeCurrency)
+  }, [nativeGasPrice, gasEstimate, nativeCurrency])
   const gasCostUSDValue = useStablecoinPriceAmount(nativeCurrency, gasCostAmount)
 
   // If valid estimate from API and using API trade, use gas estimate from API
@@ -226,14 +222,10 @@ export function useInputBasedAutoSlippage(inputAmount?: CurrencyAmount<Currency>
 
   const gasEstimate = 200000
 
-  const nativeGasCost = useMemo(
-    () => calculateNativeGasCost(nativeGasPrice?.toString(), gasEstimate),
-    [nativeGasPrice, gasEstimate],
-  )
-  const gasCostAmount = useMemo(
-    () => calculateGasCostAmount(nativeGasCost, nativeCurrency),
-    [nativeGasCost, nativeCurrency],
-  )
+  const gasCostAmount = useMemo(() => {
+    const nativeGasCost = calculateNativeGasCost(nativeGasPrice?.toString(), gasEstimate)
+    return calculateGasCostAmount(nativeGasCost, nativeCurrency)
+  }, [nativeGasPrice, nativeCurrency])
   const gasCostUSDValue = useStablecoinPriceAmount(nativeCurrency, gasCostAmount)
 
   const { data } = useQuery({
