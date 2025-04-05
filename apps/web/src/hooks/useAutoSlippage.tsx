@@ -159,11 +159,21 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
   )
   const gasCostUSDValue = useStablecoinPriceAmount(nativeCurrency, gasCostAmount)
 
+  // If valid estimate from API and using API trade, use gas estimate from API
+  // NOTE - don't use gas estimate for L2s yet - need to verify accuracy
+  // If not, use local heuristic
+  const dollarCostToUse = useMemo(() => {
+    const gasEstimateUSD = calculateGasEstimateUSD(!!supportsGasEstimate, trade, baseGasEstimatePrice)
+    return supportsGasEstimate && gasEstimateUSD ? gasEstimateUSD : gasCostUSDValue
+  }, [supportsGasEstimate, gasCostUSDValue])
+
   const { data } = useQuery({
     queryKey: [
       'classic-auto-slippage',
       trade?.inputAmount?.wrapped?.toExact(),
       trade?.outputAmount?.wrapped?.toExact(),
+      outputUSDPrice?.wrapped?.toSignificant(),
+      dollarCostToUse,
       chainId,
     ],
     queryFn: () => {
@@ -177,12 +187,6 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
         outputAmount && outputUSDPrice
           ? parseFloat(outputAmount) * parseFloat(outputUSDPrice.toSignificant(6))
           : undefined
-
-      const gasEstimateUSD = calculateGasEstimateUSD(!!supportsGasEstimate, trade, baseGasEstimatePrice)
-      // If valid estimate from API and using API trade, use gas estimate from API
-      // NOTE - don't use gas estimate for L2s yet - need to verify accuracy
-      // If not, use local heuristic
-      const dollarCostToUse = supportsGasEstimate && gasEstimateUSD ? gasEstimateUSD : gasCostUSDValue
 
       if (outputDollarValue && dollarCostToUse) {
         const calculatedSlippage = calculateSlippageFromDollarValues(dollarCostToUse, outputDollarValue)
@@ -203,9 +207,7 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
       console.log('Auto Slippage: Using DEFAULT_AUTO_SLIPPAGE because missing outputDollarValue or dollarCostToUse')
       return DEFAULT_AUTO_SLIPPAGE
     },
-    enabled: Boolean(
-      chainId && trade && trade.inputAmount && trade.outputAmount && outputUSDPrice && nativeGasPrice && nativeCurrency,
-    ),
+    enabled: Boolean(chainId && trade && trade.inputAmount && trade.outputAmount && dollarCostToUse),
     staleTime: 0,
     gcTime: 0, // Remove data from cache immediately after unmount
   })
@@ -237,7 +239,13 @@ export function useInputBasedAutoSlippage(inputAmount?: CurrencyAmount<Currency>
   const gasCostUSDValue = useStablecoinPriceAmount(nativeCurrency, gasCostAmount)
 
   const { data } = useQuery({
-    queryKey: ['input-based-auto-slippage', inputAmount?.wrapped?.toExact(), chainId],
+    queryKey: [
+      'input-based-auto-slippage',
+      inputAmount?.wrapped?.toExact(),
+      inputUSDPrice?.wrapped?.toSignificant(),
+      gasCostUSDValue,
+      chainId,
+    ],
     queryFn: () => {
       // If no input amount or on L2 chain, use default
       if (!inputAmount || onL2) return DEFAULT_AUTO_SLIPPAGE
@@ -262,7 +270,7 @@ export function useInputBasedAutoSlippage(inputAmount?: CurrencyAmount<Currency>
 
       return DEFAULT_AUTO_SLIPPAGE
     },
-    enabled: Boolean(inputAmount && inputUSDPrice && nativeGasPrice && nativeCurrency && !onL2),
+    enabled: Boolean(!onL2 && inputAmount && gasCostUSDValue),
     staleTime: 0,
     gcTime: 0, // Remove data from cache immediately after unmount
   })
