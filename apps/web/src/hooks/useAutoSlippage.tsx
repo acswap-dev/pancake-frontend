@@ -165,7 +165,7 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
   const dollarCostToUse = useMemo(() => {
     const gasEstimateUSD = calculateGasEstimateUSD(!!supportsGasEstimate, trade, baseGasEstimatePrice)
     return supportsGasEstimate && gasEstimateUSD ? gasEstimateUSD : gasCostUSDValue
-  }, [supportsGasEstimate, gasCostUSDValue])
+  }, [supportsGasEstimate, gasCostUSDValue, baseGasEstimatePrice, trade])
 
   const { data } = useQuery({
     queryKey: [
