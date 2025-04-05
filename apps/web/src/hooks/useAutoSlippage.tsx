@@ -8,8 +8,8 @@ import { L2_CHAIN_IDS } from 'config/chains'
 import { useActiveChainId } from 'hooks/useActiveChainId'
 import { useMemo } from 'react'
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { useGasPrice } from '../state/user/hooks'
+import { useQuery } from '@tanstack/react-query'
+import { useGasPrice } from 'state/user/hooks'
 import useNativeCurrency from './useNativeCurrency'
 import { useStablecoinPrice, useStablecoinPriceAmount } from './useStablecoinPrice'
 
@@ -167,6 +167,8 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
     return supportsGasEstimate && gasEstimateUSD ? gasEstimateUSD : gasCostUSDValue
   }, [supportsGasEstimate, gasCostUSDValue])
 
+  const shouldEnableQuery = Boolean(chainId && trade && trade.inputAmount && trade.outputAmount && dollarCostToUse)
+
   const { data } = useQuery({
     queryKey: [
       'classic-auto-slippage',
@@ -207,8 +209,11 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
       console.log('Auto Slippage: Using DEFAULT_AUTO_SLIPPAGE because missing outputDollarValue or dollarCostToUse')
       return DEFAULT_AUTO_SLIPPAGE
     },
-    enabled: Boolean(chainId && trade && trade.inputAmount && trade.outputAmount && dollarCostToUse),
-    placeholderData: keepPreviousData,
+    enabled: shouldEnableQuery,
+    placeholderData: (previousData) => {
+      if (shouldEnableQuery) return previousData
+      return undefined
+    },
     staleTime: 0,
     gcTime: 0, // Remove data from cache immediately after unmount
   })
@@ -223,7 +228,6 @@ export function useInputBasedAutoSlippage(inputAmount?: CurrencyAmount<Currency>
 
   const nativeGasPrice = useGasPrice()
   const nativeCurrency = useNativeCurrency(chainId)
-  const supportsGasEstimate = useMemo(() => chainId && chainSupportsGasEstimates(chainId), [chainId])
   const inputCurrency = inputAmount?.currency
   const inputUSDPrice = useStablecoinPrice(inputCurrency)
 
@@ -238,6 +242,8 @@ export function useInputBasedAutoSlippage(inputAmount?: CurrencyAmount<Currency>
     [nativeGasCost, nativeCurrency],
   )
   const gasCostUSDValue = useStablecoinPriceAmount(nativeCurrency, gasCostAmount)
+
+  const shouldEnableQuery = Boolean(!onL2 && inputAmount && gasCostUSDValue)
 
   const { data } = useQuery({
     queryKey: [
@@ -272,7 +278,10 @@ export function useInputBasedAutoSlippage(inputAmount?: CurrencyAmount<Currency>
       return DEFAULT_AUTO_SLIPPAGE
     },
     enabled: Boolean(!onL2 && inputAmount && gasCostUSDValue),
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData) => {
+      if (shouldEnableQuery) return previousData
+      return undefined
+    },
     staleTime: 0,
     gcTime: 0, // Remove data from cache immediately after unmount
   })
