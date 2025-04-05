@@ -8,7 +8,7 @@ import { L2_CHAIN_IDS } from 'config/chains'
 import { useActiveChainId } from 'hooks/useActiveChainId'
 import { useMemo } from 'react'
 
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useGasPrice } from '../state/user/hooks'
 import useNativeCurrency from './useNativeCurrency'
 import { useStablecoinPrice, useStablecoinPriceAmount } from './useStablecoinPrice'
@@ -208,6 +208,7 @@ export default function useClassicAutoSlippageTolerance(trade?: SupportedTrade):
       return DEFAULT_AUTO_SLIPPAGE
     },
     enabled: Boolean(chainId && trade && trade.inputAmount && trade.outputAmount && dollarCostToUse),
+    placeholderData: keepPreviousData,
     staleTime: 0,
     gcTime: 0, // Remove data from cache immediately after unmount
   })
@@ -271,6 +272,7 @@ export function useInputBasedAutoSlippage(inputAmount?: CurrencyAmount<Currency>
       return DEFAULT_AUTO_SLIPPAGE
     },
     enabled: Boolean(!onL2 && inputAmount && gasCostUSDValue),
+    placeholderData: keepPreviousData,
     staleTime: 0,
     gcTime: 0, // Remove data from cache immediately after unmount
   })
